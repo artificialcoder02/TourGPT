@@ -1,0 +1,4 @@
+langchain
+huggingface_hub
+chainlit
+python-dotenv
