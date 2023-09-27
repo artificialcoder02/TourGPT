@@ -9,7 +9,7 @@ import chainlit as cl
 load_dotenv()
 
 
-HUGGINGFACEHUB_API_TOKEN = os.getenv("HUGGINGFACE_API_TOKEN")
+HUGGINGFACEHUB_API_TOKEN = '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'
 
 repo_id = "tiiuae/falcon-7b-instruct"
 llm = HuggingFaceHub(huggingfacehub_api_token=HUGGINGFACEHUB_API_TOKEN, 
