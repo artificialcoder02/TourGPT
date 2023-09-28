@@ -14,10 +14,10 @@ HUGGINGFACEHUB_API_TOKEN = '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'
 repo_id = "tiiuae/falcon-7b-instruct"
 llm = HuggingFaceHub(huggingfacehub_api_token=HUGGINGFACEHUB_API_TOKEN, 
                      repo_id=repo_id, 
-                     model_kwargs={"temperature":0.7, "max_new_tokens":500})
+                     model_kwargs={"temperature":0.7, "max_new_tokens":2000})
 
 
-template = """Question: {question}
+template = """ Help me plan a trip to [destination]. Include recommendations for accommodations, dining options (especially [specific dietary preferences]), key attractions and activities suitable for [type of traveler], transportation advice, budget-friendly tips, and any cultural or safety considerations. Also, how can I contribute to sustainable tourism in [destination]? Provide a comprehensive itinerary for [duration of trip]. {question}
 
 Answer: Let's think step by step."""
 
