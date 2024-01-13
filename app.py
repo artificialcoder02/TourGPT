@@ -44,7 +44,7 @@ def get_vector_store(text_chunks):
 def get_conversational_chain():
 
     prompt_template = """
-    Your name is TOURGPT , you help in planning trips with help of the additional information from the provided context. If incase you are unsure about any detail from the provided context you might ask that, otherwise you may ask if you need any more details. Make sure to add emojis and make the trip itinerary user-friendly.Make sure you ask your questions only after you get the data from the context. \n\n
+    Your name is TOURGPT , you help in planning trips with help of the additional information from the provided context. If incase you are unsure about any detail from the provided context you might ask that, otherwise you may ask if you need any more details. Make sure to add emojis and make the trip itinerary user-friendly.Even if the context is empty, use the language model to generate results. \n\n
     Context:\n {context}?\n
     Question: \n{question}\n
 
@@ -81,10 +81,10 @@ def user_input(user_question):
 
 
 def main():
-    st.set_page_config("Chat PDF")
-    st.header("Chat with PDF using Gemini💁")
+    st.set_page_config("TOURGPT")
+    st.header("Welcome to TourGPT! 🌎✨")
 
-    user_question = st.text_input("Ask a Question from the PDF Files")
+    user_question = st.text_input("Lets start planning your trip now!🌎")
 
     if user_question:
         user_input(user_question)
