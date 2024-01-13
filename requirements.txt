@@ -2,3 +2,11 @@ langchain
 huggingface_hub
 chainlit
 python-dotenv
+streamlit
+google-generativeai
+python-dotenv
+langchain
+PyPDF2
+chromadb
+faiss-cpu
+langchain_google_genai

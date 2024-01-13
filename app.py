@@ -1,46 +1,105 @@
-from langchain import HuggingFaceHub
-from langchain import PromptTemplate, LLMChain
+import streamlit as st
+from PyPDF2 import PdfReader
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 import os
-
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
+import google.generativeai as genai
+from langchain.vectorstores import FAISS
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain.chains.question_answering import load_qa_chain
+from langchain.prompts import PromptTemplate
 from dotenv import load_dotenv
-import chainlit as cl
 
-# Load environment variables from .env file
 load_dotenv()
+os.getenv("GOOGLE_API_KEY")
+genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 
 
-HUGGINGFACEHUB_API_TOKEN = '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'
-
-repo_id = "tiiuae/falcon-7b-instruct"
-llm = HuggingFaceHub(huggingfacehub_api_token=HUGGINGFACEHUB_API_TOKEN, 
-                     repo_id=repo_id, 
-                     model_kwargs={"temperature":0.7, "max_new_tokens":2000})
 
 
-template = """ Help me plan a trip to [destination]. Include recommendations for accommodations, dining options (especially [specific dietary preferences]), key attractions and activities suitable for [type of traveler], transportation advice, budget-friendly tips, and any cultural or safety considerations. Also, how can I contribute to sustainable tourism in [destination]? Provide a comprehensive itinerary for [duration of trip]. {question}
-
-Answer: Let's think step by step."""
 
 
-@cl.on_chat_start
+def get_pdf_text(pdf_docs):
+    text=""
+    for pdf in pdf_docs:
+        pdf_reader= PdfReader(pdf)
+        for page in pdf_reader.pages:
+            text+= page.extract_text()
+    return  text
+
+
+
+def get_text_chunks(text):
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=10000, chunk_overlap=1000)
+    chunks = text_splitter.split_text(text)
+    return chunks
+
+
+def get_vector_store(text_chunks):
+    embeddings = GoogleGenerativeAIEmbeddings(model = "models/embedding-001")
+    vector_store = FAISS.from_texts(text_chunks, embedding=embeddings)
+    vector_store.save_local("faiss_index")
+
+
+def get_conversational_chain():
+
+    prompt_template = """
+    Your name is TOURGPT , you help in planning trips with help of the additional information from the provided context. If incase you are unsure about any detail from the provided context you might ask that, otherwise you may ask if you need any more details. Make sure to add emojis and make the trip itinerary user-friendly.Make sure you ask your questions only after you get the data from the context. \n\n
+    Context:\n {context}?\n
+    Question: \n{question}\n
+
+    Answer:
+    """
+
+    model = ChatGoogleGenerativeAI(model="gemini-pro",
+                             temperature=0.3)
+
+    prompt = PromptTemplate(template = prompt_template, input_variables = ["context", "question"])
+    chain = load_qa_chain(model, chain_type="stuff", prompt=prompt)
+
+    return chain
+
+
+
+def user_input(user_question):
+    embeddings = GoogleGenerativeAIEmbeddings(model = "models/embedding-001")
+    
+    new_db = FAISS.load_local("faiss_index", embeddings)
+    docs = new_db.similarity_search(user_question)
+
+    chain = get_conversational_chain()
+
+    
+    response = chain(
+        {"input_documents":docs, "question": user_question}
+        , return_only_outputs=True)
+
+    print(response)
+    st.write("Reply: ", response["output_text"])
+
+
+
+
 def main():
-    # Instantiate the chain for that user session
-    prompt = PromptTemplate(template=template, input_variables=["question"])
-    llm_chain = LLMChain(prompt=prompt, llm=llm, verbose=True)
+    st.set_page_config("Chat PDF")
+    st.header("Chat with PDF using Gemini💁")
 
-    # Store the chain in the user session
-    cl.user_session.set("llm_chain", llm_chain)
+    user_question = st.text_input("Ask a Question from the PDF Files")
+
+    if user_question:
+        user_input(user_question)
+
+    with st.sidebar:
+        st.title("Menu:")
+        pdf_docs = st.file_uploader("Upload your PDF Files and Click on the Submit & Process Button", accept_multiple_files=True)
+        if st.button("Submit & Process"):
+            with st.spinner("Processing..."):
+                raw_text = get_pdf_text(pdf_docs)
+                text_chunks = get_text_chunks(raw_text)
+                get_vector_store(text_chunks)
+                st.success("Done")
 
 
-@cl.on_message
-async def main(message: str):
-    # Retrieve the chain from the user session
-    llm_chain = cl.user_session.get("llm_chain")  # type: LLMChain
 
-    # Call the chain asynchronously
-    res = await llm_chain.acall(message, callbacks=[cl.AsyncLangchainCallbackHandler()])
-
-    # Do any post processing here
-
-    # Send the response
-    await cl.Message(content=res["text"]).send()
+if __name__ == "__main__":
+    main()
